@@ -1,5 +1,7 @@
 var renderer, scene, camera;
-var geometry, material, light, torus;
+var cloth, geometry, material, light, torus;
+
+var prev_time = 0;
 
 function maximizeRendererSize() {
     renderer.setSize(window.innerWidth, window.innerHeight);
@@ -15,7 +17,8 @@ window.onload  = function() {
     maximizeRendererSize();
     document.body.appendChild(renderer.domElement);
 
-    geometry = new THREE.ParametricGeometry(clothGeometryFunc, 25, 25);
+    cloth    = new Cloth(1, 1, 1, 3);
+    geometry = new THREE.BoxGeometry(1, 1, 1);
     material = new THREE.MeshPhongMaterial( { color: 0xffff00 } );
     light    = new THREE.DirectionalLight(0xffffff, 1);
     light.position = new THREE.Vector3(-1, -1, 1);
@@ -30,7 +33,14 @@ window.onload  = function() {
 
 window.onresize = maximizeRendererSize;
 
-function animate(dt) {
+function animate(curr_time) {
     requestAnimationFrame(animate);
+
+    if (prev_time === 0) {
+        prev_time = curr_time;
+    }
+
+    dt = curr_time - prev_time;
+
     renderer.render(scene, camera);
 }
