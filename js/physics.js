@@ -5,23 +5,24 @@ function ClothNode(mass, x, y, pos) {
     this.x    = x;
     this.y    = y;
     this.pos  = pos;
+    this.dp   = new THREE.Vector3(0, 0, 0);
     this.vel  = new THREE.Vector3(0, 0, 0);
-    this.acc  = new THREE.Vector3(0, 0, 0);
+    this.dv   = new THREE.Vector3(0, 0, 0);
+    this.acc  = GRAV_FORCE;
 }
 
 ClothNode.prototype.updatePhysics = function(cloth, dt) {
-    var neighbors = cloth.getNeighbors(this.x, this.y);
+    //var neighbors = cloth.getNeighbors(this.x, this.y);
     // TODO: Add acc calculation here
 
-
     /* Do Eulerian integration for velocity */
-    var dv = this.acc;
-    dv.multiply(dt);
-    this.vel.add(dv);
+    this.dv.copy(this.acc);
+    this.dv.multiplyScalar(dt);
+    this.vel.add(this.dv);
 
     /* Do Eulerian integration for position */
-    var dp = this.vel;
-    dp.multiply(dt);
+    this.dp.copy(this.vel);
+    this.dp.multiplyScalar(dt);
     this.pos.add(this.dp);
 }
 
@@ -71,5 +72,5 @@ Cloth.prototype.getNeighbors = function(x, y) {
 Cloth.prototype.clothGeometryFunc = function(u, v) {
     //width
 
-    return
+    //return
 }

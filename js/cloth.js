@@ -2,7 +2,7 @@ var frame_ct = 0, total_frame_time = 0;
 var infobox_elem;
 
 var renderer, scene, camera;
-var cloth, geometry, material, light, mesh;
+var cloth, geometry, material, light, mesh, mesh_node;
 
 var prev_time = 0;
 
@@ -13,6 +13,8 @@ function maximizeRendererSize() {
 }
 
 window.onload  = function() {
+    mesh_node = new ClothNode(1, 0, 0, new THREE.Vector3(0, 5, 0));
+
     infobox_elem = document.getElementById("infobox");
 
     scene = new THREE.Scene();
@@ -41,19 +43,23 @@ window.onload  = function() {
 window.onresize = maximizeRendererSize;
 
 function animate(curr_time) {
-    dt = curr_time - prev_time;
+    dt = (curr_time - prev_time) / 1000;
     prev_time = curr_time;
 
-    mesh.rotation.z += dt / 1000;
-    mesh.rotation.y += dt / 1000;
-    mesh.rotation.x += dt / 1000;
+    mesh_node.updatePhysics(undefined, dt);
+
+    mesh.rotation.z += dt;
+    mesh.rotation.y += dt;
+    mesh.rotation.x += dt;
+
+    mesh.position.y = mesh_node.pos.y;
 
     renderer.render(scene, camera);
 
     /* Show a frame rate */
     frame_ct++;
     total_frame_time += dt;
-    if (total_frame_time > 1000) {
+    if (total_frame_time > 500) {
         let frame_rate = frame_ct / (total_frame_time / 1000);
         infobox_elem.innerHTML = "FPS: " + frame_rate.toFixed(1);
         total_frame_time = 0;
