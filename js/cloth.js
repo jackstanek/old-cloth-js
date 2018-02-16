@@ -13,7 +13,7 @@ function maximizeRendererSize() {
 }
 
 window.onload  = function() {
-    mesh_node = new ClothNode(1, 0, 0, new THREE.Vector3(0, 5, 0));
+    mesh_node = new ClothNode(1, 0, 0, new THREE.Vector3(0, 4, 0));
 
     infobox_elem = document.getElementById("infobox");
 

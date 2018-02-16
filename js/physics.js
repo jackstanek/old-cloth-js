@@ -1,19 +1,31 @@
 const GRAV_FORCE = new THREE.Vector3(0, -9.8, 0);
+const PIN_POS = new THREE.Vector3(0, 5, 0);
+const TENSION = 10;
 
 function ClothNode(mass, x, y, pos) {
     this.mass = mass;
     this.x    = x;
     this.y    = y;
     this.pos  = pos;
-    this.dp   = new THREE.Vector3(0, 0, 0);
-    this.vel  = new THREE.Vector3(0, 0, 0);
-    this.dv   = new THREE.Vector3(0, 0, 0);
+    this.dp   = new THREE.Vector3();
+    this.vel  = new THREE.Vector3();
+    this.dv   = new THREE.Vector3();
     this.acc  = GRAV_FORCE;
 }
 
 ClothNode.prototype.updatePhysics = function(cloth, dt) {
     //var neighbors = cloth.getNeighbors(this.x, this.y);
-    // TODO: Add acc calculation here
+    // TODO: generalize force calculations
+    var total_forces = new THREE.Vector3();
+    total_forces.add(GRAV_FORCE);
+
+    var tmp_pos = new THREE.Vector3();
+    tmp_pos.copy(this.pos);
+    tmp_pos.sub(PIN_POS);
+    tmp_pos.negate();
+    total_forces.add(tmp_pos.multiplyScalar(TENSION)); // spring force (hooke's law)
+
+    this.acc.copy(total_forces.multiplyScalar(this.mass));
 
     /* Do Eulerian integration for velocity */
     this.dv.copy(this.acc);
