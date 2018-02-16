@@ -1,8 +1,13 @@
 body {
     margin: 0 auto;
     background-color: 0x000;
+    font-family: sans-serif;
 }
 
-#jack-3d-display {
-    margin: 0 auto;
+#infobox {
+    position: fixed;
+    color: white;
+    padding: 0.7em;
+    background-color: #333;
+    font-size: 0.7em;
 }

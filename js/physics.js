@@ -1,16 +1,28 @@
-const GRAV_FORCE = THREE.Vector3(0, -9.8, 0);
+const GRAV_FORCE = new THREE.Vector3(0, -9.8, 0);
 
 function ClothNode(mass, x, y, pos) {
     this.mass = mass;
     this.x    = x;
     this.y    = y;
     this.pos  = pos;
-    this.vel  = THREE.Vector3(0, 0, 0);
-    this.acc  = THREE.Vector3(0, 0, 0);
+    this.vel  = new THREE.Vector3(0, 0, 0);
+    this.acc  = new THREE.Vector3(0, 0, 0);
 }
 
-ClothNode.prototype.updatePhysics = function(cloth, x, y) {
-    var neighbors = cloth.getNeighbors(x, y);
+ClothNode.prototype.updatePhysics = function(cloth, dt) {
+    var neighbors = cloth.getNeighbors(this.x, this.y);
+    // TODO: Add acc calculation here
+
+
+    /* Do Eulerian integration for velocity */
+    var dv = this.acc;
+    dv.multiply(dt);
+    this.vel.add(dv);
+
+    /* Do Eulerian integration for position */
+    var dp = this.vel;
+    dp.multiply(dt);
+    this.pos.add(this.dp);
 }
 
 function Cloth(node_mass, tension, w, h) {
@@ -22,14 +34,14 @@ function Cloth(node_mass, tension, w, h) {
     for (let j = 0; j < h; j++) {
         for (let i = 0; i < w; i++) {
             this.nodes[this.nodeIndex(i, j)] = new ClothNode(node_mass, i, j,
-                                                             THREE.Vector3(i, j, 0));
+                                                             new THREE.Vector3(i, j, 0));
         }
     }
 }
 
 Cloth.prototype.updatePhysics = function(dt) {
     for (node in this.nodes) {
-        node.updatePhysics(this, 0, i);
+        node.updatePhysics(this, dt);
     }
 }
 
@@ -57,7 +69,7 @@ Cloth.prototype.getNeighbors = function(x, y) {
 }
 
 Cloth.prototype.clothGeometryFunc = function(u, v) {
-    var uFrac, vFrac;
-    [u, uFrac] = Math.floor(u), u % 1;
-    [v, vFrac] = Math.fllor(v), v % 1;
+    //width
+
+    return
 }

@@ -1,5 +1,8 @@
+var frame_ct = 0, total_frame_time = 0;
+var infobox_elem;
+
 var renderer, scene, camera;
-var cloth, geometry, material, light, torus;
+var cloth, geometry, material, light, mesh;
 
 var prev_time = 0;
 
@@ -10,7 +13,10 @@ function maximizeRendererSize() {
 }
 
 window.onload  = function() {
+    infobox_elem = document.getElementById("infobox");
+
     scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x87ceeb);
     camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight,
                                          0.1, 1000);
     renderer = new THREE.WebGLRenderer();
@@ -19,28 +25,40 @@ window.onload  = function() {
 
     cloth    = new Cloth(1, 1, 1, 3);
     geometry = new THREE.BoxGeometry(1, 1, 1);
-    material = new THREE.MeshPhongMaterial( { color: 0xffff00 } );
+    material = new THREE.MeshPhongMaterial( { color: 0x00ff00 } );
     light    = new THREE.DirectionalLight(0xffffff, 1);
-    light.position = new THREE.Vector3(-1, -1, 1);
-    torus    = new THREE.Mesh(geometry, material);
-    scene.add(torus);
+    light.position.set(5, 5, 5);
+    mesh     = new THREE.Mesh(geometry, material);
     scene.add(light);
-    scene.add(new THREE.AmbientLight(0xffffff, 0.05));
+    scene.add(mesh);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.1));
+
     camera.position.z = 5;
 
-    animate();
+    animate(0);
 }
 
 window.onresize = maximizeRendererSize;
 
 function animate(curr_time) {
-    requestAnimationFrame(animate);
-
-    if (prev_time === 0) {
-        prev_time = curr_time;
-    }
-
     dt = curr_time - prev_time;
+    prev_time = curr_time;
+
+    mesh.rotation.z += dt / 1000;
+    mesh.rotation.y += dt / 1000;
+    mesh.rotation.x += dt / 1000;
 
     renderer.render(scene, camera);
+
+    /* Show a frame rate */
+    frame_ct++;
+    total_frame_time += dt;
+    if (total_frame_time > 1000) {
+        let frame_rate = frame_ct / (total_frame_time / 1000);
+        infobox_elem.innerHTML = "FPS: " + frame_rate.toFixed(1);
+        total_frame_time = 0;
+        frame_ct = 0;
+    }
+
+    requestAnimationFrame(animate);
 }
