@@ -1,5 +1,7 @@
+const MAX_FRAME_TIME = 0.1;
+
 var frame_ct = 0, total_frame_time = 0;
-var infobox_elem;
+var framerate_elem;
 
 var renderer, scene, camera;
 var cloth, geometry, material, light, mesh, mesh_node;
@@ -13,9 +15,9 @@ function maximizeRendererSize() {
 }
 
 window.onload  = function() {
-    mesh_node = new ClothNode(1, 0, 0, new THREE.Vector3(0, 4, 0));
+    mesh_node = new ClothNode(1, 0, 0, new THREE.Vector3(0, 0, 0));
 
-    infobox_elem = document.getElementById("infobox");
+    framerate_elem = document.getElementById("fps-counter");
 
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x87ceeb);
@@ -23,6 +25,7 @@ window.onload  = function() {
                                          0.1, 1000);
     renderer = new THREE.WebGLRenderer();
     maximizeRendererSize();
+    renderer.domElement.id = "rendering-output";
     document.body.appendChild(renderer.domElement);
 
     cloth    = new Cloth(1, 1, 1, 3);
@@ -46,11 +49,14 @@ function animate(curr_time) {
     dt = (curr_time - prev_time) / 1000;
     prev_time = curr_time;
 
-    mesh_node.updatePhysics(undefined, dt);
+    /* Run forward the simulation if we were tabbed out or if the last
+     * frame just took a really long time */
+    while (dt > MAX_FRAME_TIME) {
+        mesh_node.updatePhysics(undefined, MAX_FRAME_TIME);
+        dt -= MAX_FRAME_TIME;
+    }
 
-    mesh.rotation.z += dt;
-    mesh.rotation.y += dt;
-    mesh.rotation.x += dt;
+    mesh_node.updatePhysics(undefined, dt);
 
     mesh.position.y = mesh_node.pos.y;
 
@@ -59,9 +65,9 @@ function animate(curr_time) {
     /* Show a frame rate */
     frame_ct++;
     total_frame_time += dt;
-    if (total_frame_time > 500) {
-        let frame_rate = frame_ct / (total_frame_time / 1000);
-        infobox_elem.innerHTML = "FPS: " + frame_rate.toFixed(1);
+    if (total_frame_time > 1.0) {
+        let frame_rate = frame_ct / total_frame_time;
+        framerate_elem.innerHTML = "FPS: " + frame_rate.toFixed(1);
         total_frame_time = 0;
         frame_ct = 0;
     }
