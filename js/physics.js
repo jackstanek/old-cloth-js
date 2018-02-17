@@ -7,14 +7,14 @@ const DEFAULT_MATERIAL = new THREE.MeshPhongMaterial({color: 0xffffff});
 function ClothNode(mass, index, pos, tension, damping) {
     this.mass     = mass;
     this.index    = index;
-    this.pos      = pos;
+    this.pos      = new UpdatableVec3(pos);
     this.dp       = new THREE.Vector3();
-    this.vel      = new THREE.Vector3();
+    this.vel      = new UpdatableVec3();
     this.dv       = new THREE.Vector3();
-    this.acc      = new THREE.Vector3();
-    this.mesh     = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.3, 0.3),
+    this.acc      = new UpdatableVec3();
+    this.mesh     = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 0.1),
                                    DEFAULT_MATERIAL);
-    this.mesh.position.copy(this.pos);
+    this.mesh.position.copy(this.pos.ol);
 }
 
 ClothNode.prototype.updatePhysics = function(cloth, dt) {
@@ -35,8 +35,8 @@ ClothNode.prototype.updatePhysics = function(cloth, dt) {
     // Spring restorative forces
     // This first force we know will always exist. (the spring force from above)
     var above_spring = new THREE.Vector3();
-    above_spring.copy(this.pos);
-    above_spring.sub(cloth.nodes[this.index - 1].pos);
+    above_spring.copy(this.pos.ol);
+    above_spring.sub(cloth.nodes[this.index - 1].pos.ol);
     above_spring.negate();
     var above_spring_len = above_spring.length();
     /* Add in the spring force (Hooke's Law) */
@@ -48,8 +48,8 @@ ClothNode.prototype.updatePhysics = function(cloth, dt) {
     // Every node except for the last will have a force exerted on it from below
     if (this.index < cloth.nodes.length - 1) {
         var below_spring = new THREE.Vector3();
-        below_spring.copy(this.pos);
-        below_spring.sub(cloth.nodes[this.index + 1].pos);
+        below_spring.copy(this.pos.ol);
+        below_spring.sub(cloth.nodes[this.index + 1].pos.ol);
         below_spring.negate();
         var below_spring_len = below_spring.length();
         /* Add in the spring force (Hooke's Law) */
@@ -59,27 +59,33 @@ ClothNode.prototype.updatePhysics = function(cloth, dt) {
                                          below_spring_len - cloth.spring_len));
     }
 
-
     // Damping force
     var tmp_vel = new THREE.Vector3();
-    tmp_vel.copy(this.vel);
+    tmp_vel.copy(this.vel.ol);
     tmp_vel.negate();
     total_forces.add(tmp_vel.multiplyScalar(cloth.damping));
 
-    this.acc.copy(total_forces.divideScalar(this.mass));
-    this.acc.add(GRAV_ACC);
+    // Gravitational force
+    total_forces.add(new THREE.Vector3(0, -9.8 * this.mass, 0));
+
+    this.acc.ne.copy(total_forces.divideScalar(this.mass));
 
     /* Do Eulerian integration for velocity */
-    this.dv.copy(this.acc);
+    this.dv.copy(this.acc.ne);
     this.dv.multiplyScalar(dt);
-    this.vel.add(this.dv);
+    this.vel.ne.add(this.dv);
 
     /* Do Eulerian integration for position */
-    this.dp.copy(this.vel);
+    this.dp.copy(this.vel.ne);
     this.dp.multiplyScalar(dt);
-    this.pos.add(this.dp);
+    this.pos.ne.add(this.dp);
+}
 
-    this.mesh.position.copy(this.pos);
+ClothNode.prototype.commitUpdate = function() {
+    this.acc.swap();
+    this.vel.swap();
+    this.pos.swap();
+    this.mesh.position.copy(this.pos.ol);
 }
 
 /* For now, a Cloth object simply represents a thread, string, or
@@ -88,17 +94,21 @@ function Cloth(node_mass, tension, damping, length) {
     this.nodes      = new Array();
     this.tension    = tension;
     this.damping    = damping;
-    this.spring_len = 1; // TODO: Make this adjustable (for size of cloth and so forth)
+    this.spring_len = 0.2; // TODO: Make this adjustable (for size of cloth and so forth)
 
     for (let i = 0; i < length; i++) {
         this.nodes[i] = new ClothNode(node_mass, i,
-                                      new THREE.Vector3(i, length - i, 0));
+                                      new THREE.Vector3(i, 3 - i, 0));
     }
 }
 
 Cloth.prototype.updatePhysics = function(dt) {
     for (node in this.nodes) {
         this.nodes[node].updatePhysics(this, dt);
+    }
+
+    for (node in this.nodes) {
+        this.nodes[node].commitUpdate();
     }
 }
 
