@@ -1,31 +1,46 @@
-const GRAV_FORCE = new THREE.Vector3(0, -9.8, 0);
-const PIN_POS = new THREE.Vector3(0, 5, 0);
-const TENSION = 10;
+/* Some constants. GRAV_ACC is not really a force since it is
+ * constant for every object. */
+const GRAV_ACC   = new THREE.Vector3(0, -10, 0);
+const PIN_POS    = new THREE.Vector3(0, 3.5, 0);
 
-function ClothNode(mass, x, y, pos) {
-    this.mass = mass;
-    this.x    = x;
-    this.y    = y;
-    this.pos  = pos;
-    this.dp   = new THREE.Vector3();
-    this.vel  = new THREE.Vector3();
-    this.dv   = new THREE.Vector3();
-    this.acc  = GRAV_FORCE;
+const DEFAULT_MATERIAL = new THREE.MeshPhongMaterial({color: 0x00ff00});
+
+function ClothNode(mass, index, pos, tension, damping) {
+    this.mass     = mass;
+    this.index    = index;
+    this.pos      = pos;
+    this.dp       = new THREE.Vector3();
+    this.vel      = new THREE.Vector3();
+    this.dv       = new THREE.Vector3();
+    this.acc      = new THREE.Vector3();
+    this.mesh     = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.3, 0.3),
+                                   DEFAULT_MATERIAL);
+    this.mesh.position.copy(this.pos);
 }
 
 ClothNode.prototype.updatePhysics = function(cloth, dt) {
     //var neighbors = cloth.getNeighbors(this.x, this.y);
     // TODO: generalize force calculations
     var total_forces = new THREE.Vector3();
-    total_forces.add(GRAV_FORCE);
 
+    // Spring restorative force
     var tmp_pos = new THREE.Vector3();
     tmp_pos.copy(this.pos);
     tmp_pos.sub(PIN_POS);
     tmp_pos.negate();
-    total_forces.add(tmp_pos.multiplyScalar(TENSION)); // spring force (hooke's law)
+    var curr_spring_len = tmp_pos.length();
+    total_forces.add(tmp_pos
+                     .normalize()
+                     .multiplyScalar(cloth.tension * (curr_spring_len - cloth.spring_len))); // spring force (hooke's law)
 
-    this.acc.copy(total_forces.multiplyScalar(this.mass));
+    // Damping force
+    var tmp_vel = new THREE.Vector3();
+    tmp_vel.copy(this.vel);
+    tmp_vel.negate();
+    total_forces.add(tmp_vel.multiplyScalar(cloth.damping));
+
+    this.acc.copy(total_forces.divideScalar(this.mass));
+    this.acc.add(GRAV_ACC);
 
     /* Do Eulerian integration for velocity */
     this.dv.copy(this.acc);
@@ -36,25 +51,28 @@ ClothNode.prototype.updatePhysics = function(cloth, dt) {
     this.dp.copy(this.vel);
     this.dp.multiplyScalar(dt);
     this.pos.add(this.dp);
+
+    this.mesh.position.copy(this.pos);
 }
 
-function Cloth(node_mass, tension, w, h) {
-    this.nodes   = new Array();
-    this.tension = tension;
-    this.width   = w;
-    this.height  = h;
+/* For now, a Cloth object simply represents a thread, string, or
+ * rope-like object. */
+function Cloth(node_mass, tension, damping, length) {
+    this.nodes      = new Array();
+    this.tension    = tension;
+    this.damping    = damping;
+    this.spring_len = 1; // TODO: Make this adjustable (for size of cloth and so forth)
 
-    for (let j = 0; j < h; j++) {
-        for (let i = 0; i < w; i++) {
-            this.nodes[this.nodeIndex(i, j)] = new ClothNode(node_mass, i, j,
-                                                             new THREE.Vector3(i, j, 0));
-        }
+    for (let i = 0; i < length; i++) {
+        this.nodes[i] = new ClothNode(node_mass, i,
+                                      new THREE.Vector3(0, length - i, 0));
     }
+
 }
 
 Cloth.prototype.updatePhysics = function(dt) {
     for (node in this.nodes) {
-        node.updatePhysics(this, dt);
+        this.nodes[node].updatePhysics(this, dt);
     }
 }
 
@@ -77,7 +95,7 @@ Cloth.prototype.getNeighbors = function(x, y) {
         return [[x - 1, y],
                 [x + 1, y],
                 [x, y - 1],
-                [x, y + 1]].filter(this.isValid);
+                [x, y + 1]].filter(this.isValid).map(this.nodeIndex);
     }
 }
 

@@ -4,7 +4,7 @@ var frame_ct = 0, total_frame_time = 0;
 var framerate_elem;
 
 var renderer, scene, camera;
-var cloth, geometry, material, light, mesh, mesh_node;
+var cloth, light;
 
 var prev_time = 0;
 
@@ -15,7 +15,7 @@ function maximizeRendererSize() {
 }
 
 window.onload  = function() {
-    mesh_node = new ClothNode(1, 0, 0, new THREE.Vector3(0, 0, 0));
+    cloth = new Cloth(1, 4, 0.25, 1);
 
     framerate_elem = document.getElementById("fps-counter");
 
@@ -28,14 +28,10 @@ window.onload  = function() {
     renderer.domElement.id = "rendering-output";
     document.body.appendChild(renderer.domElement);
 
-    cloth    = new Cloth(1, 1, 1, 3);
-    geometry = new THREE.BoxGeometry(1, 1, 1);
-    material = new THREE.MeshPhongMaterial( { color: 0x00ff00 } );
     light    = new THREE.DirectionalLight(0xffffff, 1);
     light.position.set(5, 5, 5);
-    mesh     = new THREE.Mesh(geometry, material);
     scene.add(light);
-    scene.add(mesh);
+    scene.add(cloth.nodes[0].mesh);
     scene.add(new THREE.AmbientLight(0xffffff, 0.1));
 
     camera.position.z = 5;
@@ -52,13 +48,11 @@ function animate(curr_time) {
     /* Run forward the simulation if we were tabbed out or if the last
      * frame just took a really long time */
     while (dt > MAX_FRAME_TIME) {
-        mesh_node.updatePhysics(undefined, MAX_FRAME_TIME);
+        cloth.updatePhysics(MAX_FRAME_TIME);
         dt -= MAX_FRAME_TIME;
     }
 
-    mesh_node.updatePhysics(undefined, dt);
-
-    mesh.position.y = mesh_node.pos.y;
+    cloth.updatePhysics(dt);
 
     renderer.render(scene, camera);
 

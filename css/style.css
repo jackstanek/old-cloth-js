@@ -10,4 +10,20 @@ body {
     padding: 0.7em;
     background-color: #333;
     font-size: 0.7em;
+    z-index: 2;
+    opacity: 0.3;
+    transition: opacity 0.25s;
+}
+
+#infobox:hover {
+    opacity: 1.0;
+}
+
+#rendering-output {
+    z-index: 1;
+}
+
+#infobox h1 {
+    font-size: 1.2em;
+    margin: 0 auto;
 }
