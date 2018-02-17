@@ -15,7 +15,7 @@ function maximizeRendererSize() {
 }
 
 window.onload  = function() {
-    cloth = new Cloth(1, 4, 0.25, 1);
+    cloth = new Cloth(1, 4, 0.5, 3);
 
     framerate_elem = document.getElementById("fps-counter");
 
@@ -31,10 +31,11 @@ window.onload  = function() {
     light    = new THREE.DirectionalLight(0xffffff, 1);
     light.position.set(5, 5, 5);
     scene.add(light);
-    scene.add(cloth.nodes[0].mesh);
     scene.add(new THREE.AmbientLight(0xffffff, 0.1));
 
     camera.position.z = 5;
+
+    cloth.initScene(scene);
 
     animate(0);
 }
