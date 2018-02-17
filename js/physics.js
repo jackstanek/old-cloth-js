@@ -2,7 +2,7 @@
  * constant for every object. */
 const GRAV_ACC   = new THREE.Vector3(0, -10, 0);
 
-const DEFAULT_MATERIAL = new THREE.MeshPhongMaterial({color: 0x00ff00});
+const DEFAULT_MATERIAL = new THREE.MeshPhongMaterial({color: 0xffffff});
 
 function ClothNode(mass, index, pos, tension, damping) {
     this.mass     = mass;
@@ -18,6 +18,12 @@ function ClothNode(mass, index, pos, tension, damping) {
 }
 
 ClothNode.prototype.updatePhysics = function(cloth, dt) {
+    /* Rotation for fanciness */
+    this.mesh.rotation.x += dt;
+    this.mesh.rotation.y += dt;
+    this.mesh.rotation.z += dt;
+
+    /* The top of the thread is pinned in place. */
     if (this.index === 0) {
         return;
     }
@@ -26,25 +32,39 @@ ClothNode.prototype.updatePhysics = function(cloth, dt) {
     // TODO: generalize force calculations
     var total_forces = new THREE.Vector3();
 
-    // Spring restorative force
-    var tmp_pos = new THREE.Vector3();
-    tmp_pos.copy(this.pos);
-    tmp_pos.sub(cloth.pin);
-    tmp_pos.negate();
-    var curr_spring_len = tmp_pos.length();
+    // Spring restorative forces
+    // This first force we know will always exist. (the spring force from above)
+    var above_spring = new THREE.Vector3();
+    above_spring.copy(this.pos);
+    above_spring.sub(cloth.nodes[this.index - 1].pos);
+    above_spring.negate();
+    var above_spring_len = above_spring.length();
     /* Add in the spring force (Hooke's Law) */
-    total_forces.add(tmp_pos
+    total_forces.add(above_spring
                      .normalize()
                      .multiplyScalar(cloth.tension *
-                                     (curr_spring_len - cloth.spring_len)));
+                                     (above_spring_len - cloth.spring_len)));
+
+    // Every node except for the last will have a force exerted on it from below
+    if (this.index < cloth.nodes.length - 1) {
+        var below_spring = new THREE.Vector3();
+        below_spring.copy(this.pos);
+        below_spring.sub(cloth.nodes[this.index + 1].pos);
+        below_spring.negate();
+        var below_spring_len = below_spring.length();
+        /* Add in the spring force (Hooke's Law) */
+        total_forces.add(below_spring
+                         .normalize()
+                         .multiplyScalar(cloth.tension *
+                                         below_spring_len - cloth.spring_len));
+    }
+
 
     // Damping force
     var tmp_vel = new THREE.Vector3();
     tmp_vel.copy(this.vel);
     tmp_vel.negate();
     total_forces.add(tmp_vel.multiplyScalar(cloth.damping));
-
-    // Forces from neighboring springs
 
     this.acc.copy(total_forces.divideScalar(this.mass));
     this.acc.add(GRAV_ACC);
@@ -72,11 +92,8 @@ function Cloth(node_mass, tension, damping, length) {
 
     for (let i = 0; i < length; i++) {
         this.nodes[i] = new ClothNode(node_mass, i,
-                                      new THREE.Vector3(0, length - i, 0));
+                                      new THREE.Vector3(i, length - i, 0));
     }
-
-    this.pin = new THREE.Vector3();
-    this.pin.copy(this.nodes[0].pos);
 }
 
 Cloth.prototype.updatePhysics = function(dt) {
