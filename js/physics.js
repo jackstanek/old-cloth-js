@@ -4,6 +4,13 @@ const GRAV_ACC   = new THREE.Vector3(0, -10, 0);
 
 const DEFAULT_MATERIAL = new THREE.MeshPhongMaterial({color: 0xffffff});
 
+function integrate(y, y_prime, dt) {
+    var dy = new THREE.Vector3();
+    dy.copy(y_prime.ne);
+    dy.multiplyScalar(dt);
+    y.ne.add(dy);
+}
+
 function ClothNode(mass, index, pos, tension, damping) {
     this.mass     = mass;
     this.index    = index;
@@ -71,14 +78,10 @@ ClothNode.prototype.updatePhysics = function(cloth, dt) {
     this.acc.ne.copy(total_forces.divideScalar(this.mass));
 
     /* Do Eulerian integration for velocity */
-    this.dv.copy(this.acc.ne);
-    this.dv.multiplyScalar(dt);
-    this.vel.ne.add(this.dv);
+    integrate(this.vel, this.acc, dt);
 
     /* Do Eulerian integration for position */
-    this.dp.copy(this.vel.ne);
-    this.dp.multiplyScalar(dt);
-    this.pos.ne.add(this.dp);
+    integrate(this.pos, this.vel, dt);
 }
 
 ClothNode.prototype.commitUpdate = function() {
@@ -98,7 +101,7 @@ function Cloth(node_mass, tension, damping, length) {
 
     for (let i = 0; i < length; i++) {
         this.nodes[i] = new ClothNode(node_mass, i,
-                                      new THREE.Vector3(i, 3 - i, 0));
+                                      new THREE.Vector3(0, 3 - i, 0));
     }
 }
 

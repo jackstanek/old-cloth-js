@@ -1,4 +1,4 @@
-const MAX_FRAME_TIME = 0.1;
+const MAX_FRAME_TIME = 0.05;
 
 var frame_ct = 0, total_frame_time = 0;
 var framerate_elem;
@@ -15,7 +15,7 @@ function maximizeRendererSize() {
 }
 
 window.onload  = function() {
-    cloth = new Cloth(1, 100, 1, 7);
+    cloth = new Cloth(1, 100, 8, 7);
 
     framerate_elem = document.getElementById("fps-counter");
 
