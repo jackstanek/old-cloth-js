@@ -1,4 +1,4 @@
-const MAX_FRAME_TIME = 0.05;
+const MAX_FRAME_TIME = 0.25;
 
 var frame_ct = 0, total_frame_time = 0;
 var framerate_elem;
@@ -15,7 +15,7 @@ function maximizeRendererSize() {
 }
 
 window.onload  = function() {
-    cloth = new Cloth(1, 100, 8, 7);
+    cloth = new Cloth(0.01, 1, 0.01, 7, 7);
 
     framerate_elem = document.getElementById("fps-counter");
 
@@ -43,14 +43,14 @@ window.onload  = function() {
 window.onresize = maximizeRendererSize;
 
 function animate(curr_time) {
+    requestAnimationFrame(animate);
     dt = (curr_time - prev_time) / 1000;
     prev_time = curr_time;
 
     /* Run forward the simulation if we were tabbed out or if the last
      * frame just took a really long time */
-    while (dt > MAX_FRAME_TIME) {
-        cloth.updatePhysics(MAX_FRAME_TIME);
-        dt -= MAX_FRAME_TIME;
+    if (dt > MAX_FRAME_TIME) {
+        return;
     }
 
     cloth.updatePhysics(dt);
@@ -66,6 +66,4 @@ function animate(curr_time) {
         total_frame_time = 0;
         frame_ct = 0;
     }
-
-    requestAnimationFrame(animate);
 }

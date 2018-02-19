@@ -4,6 +4,12 @@ const GRAV_ACC   = new THREE.Vector3(0, -10, 0);
 
 const DEFAULT_MATERIAL = new THREE.MeshPhongMaterial({color: 0xffffff});
 
+function randomVector3() {
+    return new THREE.Vector3(Math.random() * 2 - 1,
+                             Math.random() * 2 - 1,
+                             Math.random() * 2 - 1).normalize();
+}
+
 function integrate(y, y_prime, dt) {
     var dy = new THREE.Vector3();
     dy.copy(y_prime.ne);
@@ -11,27 +17,22 @@ function integrate(y, y_prime, dt) {
     y.ne.add(dy);
 }
 
-function ClothNode(mass, index, pos, tension, damping) {
+function ClothNode(mass, x, y, pos, tension, damping) {
     this.mass     = mass;
-    this.index    = index;
+    this.index    = { x: x, y: y };
     this.pos      = new UpdatableVec3(pos);
     this.dp       = new THREE.Vector3();
-    this.vel      = new UpdatableVec3();
+    this.vel      = new UpdatableVec3(randomVector3());
     this.dv       = new THREE.Vector3();
     this.acc      = new UpdatableVec3();
-    this.mesh     = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 0.1),
+    this.mesh     = new THREE.Mesh(new THREE.SphereGeometry(0.1),
                                    DEFAULT_MATERIAL);
     this.mesh.position.copy(this.pos.ol);
 }
 
 ClothNode.prototype.updatePhysics = function(cloth, dt) {
-    /* Rotation for fanciness */
-    this.mesh.rotation.x += dt;
-    this.mesh.rotation.y += dt;
-    this.mesh.rotation.z += dt;
-
     /* The top of the thread is pinned in place. */
-    if (this.index === 0) {
+    if (this.index.y === 0) {
         return;
     }
 
@@ -41,9 +42,12 @@ ClothNode.prototype.updatePhysics = function(cloth, dt) {
 
     // Spring restorative forces
     // This first force we know will always exist. (the spring force from above)
-    var above_spring = new THREE.Vector3();
+    var above_spring = new THREE.Vector3(),
+        above_index  = {x: this.index.x,
+                        y: this.index.y - 1};
+
     above_spring.copy(this.pos.ol);
-    above_spring.sub(cloth.nodes[this.index - 1].pos.ol);
+    above_spring.sub(cloth.nodeAtIndex(above_index).pos.ol);
     above_spring.negate();
     var above_spring_len = above_spring.length();
     /* Add in the spring force (Hooke's Law) */
@@ -53,10 +57,12 @@ ClothNode.prototype.updatePhysics = function(cloth, dt) {
                                      (above_spring_len - cloth.spring_len)));
 
     // Every node except for the last will have a force exerted on it from below
-    if (this.index < cloth.nodes.length - 1) {
-        var below_spring = new THREE.Vector3();
+    if (this.index.y + 1 < cloth.h) {
+        var below_spring = new THREE.Vector3(),
+            below_index  = {x: this.index.x,
+                            y: this.index.y + 1};
         below_spring.copy(this.pos.ol);
-        below_spring.sub(cloth.nodes[this.index + 1].pos.ol);
+        below_spring.sub(cloth.nodes[(this.index.y + 1) * cloth.w + this.index.x].pos.ol);
         below_spring.negate();
         var below_spring_len = below_spring.length();
         /* Add in the spring force (Hooke's Law) */
@@ -93,15 +99,19 @@ ClothNode.prototype.commitUpdate = function() {
 
 /* For now, a Cloth object simply represents a thread, string, or
  * rope-like object. */
-function Cloth(node_mass, tension, damping, length) {
+function Cloth(node_mass, tension, damping, w, h) {
     this.nodes      = new Array();
     this.tension    = tension;
     this.damping    = damping;
-    this.spring_len = 0.2; // TODO: Make this adjustable (for size of cloth and so forth)
+    this.w          = w;
+    this.h          = h;
+    this.spring_len = 0.5; // TODO: Make this adjustable (for size of cloth and so forth)
 
-    for (let i = 0; i < length; i++) {
-        this.nodes[i] = new ClothNode(node_mass, i,
-                                      new THREE.Vector3(0, 3 - i, 0));
+    for (let i = 0; i < w * h; i++) {
+        let x = i % w, y = Math.floor(i / h);
+        this.nodes[i] = new ClothNode(node_mass, x, y,
+                                      new THREE.Vector3(Math.floor(w / 2) - x,
+                                                        Math.floor(h / 2) - y, 0));
     }
 }
 
@@ -115,37 +125,22 @@ Cloth.prototype.updatePhysics = function(dt) {
     }
 }
 
-Cloth.prototype.nodeIndex = function(x, y) {
-    return y * this.width + x;
+Cloth.prototype.nodeIndex = function(index) {
+    return index.y * this.w + index.x;
 }
 
-Cloth.prototype.isValid = function(pos) {
-    var x, y;
-    [x, y] = pos;
-
-    return (x >= 0 && x < width &&
-            y >= 0 && y < height);
+Cloth.prototype.nodeAtIndex = function(index) {
+    return this.nodes[this.nodeIndex(index)];
 }
 
-Cloth.prototype.getNeighbors = function(x, y) {
-    if (!isValid([x, y])) {
-        return undefined;
-    } else {
-        return [[x - 1, y],
-                [x + 1, y],
-                [x, y - 1],
-                [x, y + 1]].filter(this.isValid).map(this.nodeIndex);
-    }
+Cloth.prototype.isValid = function(index) {
+    return (index.x >= 0 && index.x < this.w &&
+            index.y >= 0 && index.y < this.h);
 }
 
+// TODO: Make this create a parametric geometry instead
 Cloth.prototype.initScene = function(scene) {
     for (let i = 0; i < this.nodes.length; i++) {
         scene.add(this.nodes[i].mesh);
     }
-}
-
-Cloth.prototype.clothGeometryFunc = function(u, v) {
-    //width
-
-    //return
 }
