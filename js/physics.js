@@ -22,7 +22,7 @@ function ClothNode(mass, x, y, pos, tension, damping) {
     this.index    = { x: x, y: y };
     this.pos      = new UpdatableVec3(pos);
     this.dp       = new THREE.Vector3();
-    this.vel      = new UpdatableVec3(randomVector3());
+    this.vel      = new UpdatableVec3();
     this.dv       = new THREE.Vector3();
     this.acc      = new UpdatableVec3();
     this.mesh     = new THREE.Mesh(new THREE.SphereGeometry(0.1),
@@ -36,40 +36,19 @@ ClothNode.prototype.updatePhysics = function(cloth, dt) {
         return;
     }
 
-    //var neighbors = cloth.getNeighbors(this.x, this.y);
-    // TODO: generalize force calculations
     var total_forces = new THREE.Vector3();
 
     // Spring restorative forces
     // This first force we know will always exist. (the spring force from above)
-    var above_spring = new THREE.Vector3(),
-        above_index  = {x: this.index.x,
-                        y: this.index.y - 1};
-
-    above_spring.copy(this.pos.ol);
-    above_spring.sub(cloth.nodeAtIndex(above_index).pos.ol);
-    above_spring.negate();
-    var above_spring_len = above_spring.length();
-    /* Add in the spring force (Hooke's Law) */
-    total_forces.add(above_spring
-                     .normalize()
-                     .multiplyScalar(cloth.tension *
-                                     (above_spring_len - cloth.spring_len)));
-
-    // Every node except for the last will have a force exerted on it from below
-    if (this.index.y + 1 < cloth.h) {
-        var below_spring = new THREE.Vector3(),
-            below_index  = {x: this.index.x,
-                            y: this.index.y + 1};
-        below_spring.copy(this.pos.ol);
-        below_spring.sub(cloth.nodes[(this.index.y + 1) * cloth.w + this.index.x].pos.ol);
-        below_spring.negate();
-        var below_spring_len = below_spring.length();
-        /* Add in the spring force (Hooke's Law) */
-        total_forces.add(below_spring
-                         .normalize()
-                         .multiplyScalar(cloth.tension *
-                                         below_spring_len - cloth.spring_len));
+    var neighbors = [{x: this.index.x, y: this.index.y - 1},
+                     {x: this.index.x, y: this.index.y + 1},
+                     {x: this.index.x - 1, y: this.index.y},
+                     {x: this.index.x + 1, y: this.index.y}];
+    for (n in neighbors) {
+        let neighbor_index = neighbors[n];
+        if (cloth.isValid(neighbor_index)) {
+            total_forces.add(this.forceFrom(neighbor_index));
+        }
     }
 
     // Damping force
@@ -97,6 +76,19 @@ ClothNode.prototype.commitUpdate = function() {
     this.mesh.position.copy(this.pos.ol);
 }
 
+ClothNode.prototype.forceFrom = function(neighbor_index) {
+    var neighbor_spring = new THREE.Vector3();
+    neighbor_spring.copy(this.pos.ol);
+    neighbor_spring.sub(cloth.nodeAtIndex(neighbor_index).pos.ol);
+    neighbor_spring.negate();
+    var neighbor_spring_len = neighbor_spring.length();
+    /* Add in the spring force (Hooke's Law) */
+    return neighbor_spring
+        .normalize()
+        .multiplyScalar(cloth.tension *
+                        (neighbor_spring_len - cloth.spring_len));
+}
+
 /* For now, a Cloth object simply represents a thread, string, or
  * rope-like object. */
 function Cloth(node_mass, tension, damping, w, h) {
@@ -110,8 +102,8 @@ function Cloth(node_mass, tension, damping, w, h) {
     for (let i = 0; i < w * h; i++) {
         let x = i % w, y = Math.floor(i / h);
         this.nodes[i] = new ClothNode(node_mass, x, y,
-                                      new THREE.Vector3(Math.floor(w / 2) - x,
-                                                        Math.floor(h / 2) - y, 0));
+                                      new THREE.Vector3(Math.floor(w / 2) - x / 2,
+                                                        Math.floor(h / 2) - y / 2, 0));
     }
 }
 
