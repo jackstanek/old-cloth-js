@@ -91,19 +91,20 @@ ClothNode.prototype.forceFrom = function(neighbor_index) {
 
 /* For now, a Cloth object simply represents a thread, string, or
  * rope-like object. */
-function Cloth(node_mass, tension, damping, w, h) {
+function Cloth(node_mass, tension, damping, size, density) {
     this.nodes      = new Array();
     this.tension    = tension;
     this.damping    = damping;
-    this.w          = w;
-    this.h          = h;
-    this.spring_len = 0.5; // TODO: Make this adjustable (for size of cloth and so forth)
+    this.w          = size;
+    this.h          = size;
+    this.density    = density;
+    this.spring_len = size / density;
 
-    for (let i = 0; i < w * h; i++) {
-        let x = i % w, y = Math.floor(i / h);
+    for (let i = 0; i < this.w * this.h; i++) {
+        let x = i % this.w, y = Math.floor(i / this.h);
         this.nodes[i] = new ClothNode(node_mass, x, y,
-                                      new THREE.Vector3(Math.floor(w / 2) - x / 2,
-                                                        Math.floor(h / 2) - y / 2, 0));
+                                      new THREE.Vector3(this.spring_len * x - this.w / 2,
+                                                        this.h / 2 - this.spring_len * y, 0));
     }
 }
 
