@@ -4,7 +4,7 @@ var frame_ct = 0, total_frame_time = 0;
 var framerate_elem;
 
 var renderer, scene, camera;
-var cloth, light;
+var cloth_inst, light;
 
 var prev_time = 0;
 
@@ -15,7 +15,7 @@ function maximizeRendererSize() {
 }
 
 window.onload  = function() {
-    cloth = new Cloth(0.01, 2, 0.1, 7, 7);
+    cloth_inst = new Cloth(0.05, 10, 0.1, 5, 8);
 
     framerate_elem = document.getElementById("fps-counter");
 
@@ -35,7 +35,7 @@ window.onload  = function() {
 
     camera.position.z = 5;
 
-    cloth.initScene(scene);
+    cloth_inst.initScene(scene);
 
     animate(0);
 }
@@ -53,7 +53,7 @@ function animate(curr_time) {
         return;
     }
 
-    cloth.updatePhysics(dt);
+    cloth_inst.updatePhysics(dt);
 
     renderer.render(scene, camera);
 

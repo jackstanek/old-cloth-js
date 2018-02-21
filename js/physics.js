@@ -22,7 +22,7 @@ function ClothNode(mass, x, y, pos, tension, damping) {
     this.index    = { x: x, y: y };
     this.pos      = new UpdatableVec3(pos);
     this.dp       = new THREE.Vector3();
-    this.vel      = new UpdatableVec3();
+    this.vel      = new UpdatableVec3(randomVector3());
     this.dv       = new THREE.Vector3();
     this.acc      = new UpdatableVec3();
     this.mesh     = new THREE.Mesh(new THREE.SphereGeometry(0.1),
@@ -47,7 +47,7 @@ ClothNode.prototype.updatePhysics = function(cloth, dt) {
     for (n in neighbors) {
         let neighbor_index = neighbors[n];
         if (cloth.isValid(neighbor_index)) {
-            total_forces.add(this.forceFrom(neighbor_index));
+            total_forces.add(this.forceFrom(cloth, neighbor_index));
         }
     }
 
@@ -76,7 +76,7 @@ ClothNode.prototype.commitUpdate = function() {
     this.mesh.position.copy(this.pos.ol);
 }
 
-ClothNode.prototype.forceFrom = function(neighbor_index) {
+ClothNode.prototype.forceFrom = function(cloth, neighbor_index) {
     var neighbor_spring = new THREE.Vector3();
     neighbor_spring.copy(this.pos.ol);
     neighbor_spring.sub(cloth.nodeAtIndex(neighbor_index).pos.ol);
@@ -95,16 +95,15 @@ function Cloth(node_mass, tension, damping, size, density) {
     this.nodes      = new Array();
     this.tension    = tension;
     this.damping    = damping;
-    this.w          = size;
-    this.h          = size;
-    this.density    = density;
+    this.size       = size;
+    this.density    = Math.floor(density);
     this.spring_len = size / density;
 
-    for (let i = 0; i < this.w * this.h; i++) {
-        let x = i % this.w, y = Math.floor(i / this.h);
+    for (let i = 0; i < density * density; i++) {
+        let x = i % this.density, y = Math.floor(i / this.density);
         this.nodes[i] = new ClothNode(node_mass, x, y,
-                                      new THREE.Vector3(this.spring_len * x - this.w / 2,
-                                                        this.h / 2 - this.spring_len * y, 0));
+                                      new THREE.Vector3(this.spring_len * x - this.size / 2,
+                                                        this.size / 2 - this.spring_len * y, 0));
     }
 }
 
@@ -119,7 +118,7 @@ Cloth.prototype.updatePhysics = function(dt) {
 }
 
 Cloth.prototype.nodeIndex = function(index) {
-    return index.y * this.w + index.x;
+    return index.y * this.density + index.x;
 }
 
 Cloth.prototype.nodeAtIndex = function(index) {
@@ -127,8 +126,9 @@ Cloth.prototype.nodeAtIndex = function(index) {
 }
 
 Cloth.prototype.isValid = function(index) {
-    return (index.x >= 0 && index.x < this.w &&
-            index.y >= 0 && index.y < this.h);
+    //console.log("checking " + index.x + ", " + index.y);
+    return (index.x >= 0 && index.x < this.density &&
+            index.y >= 0 && index.y < this.density);
 }
 
 // TODO: Make this create a parametric geometry instead
@@ -136,4 +136,8 @@ Cloth.prototype.initScene = function(scene) {
     for (let i = 0; i < this.nodes.length; i++) {
         scene.add(this.nodes[i].mesh);
     }
+}
+
+function clothGeometryFunc(u, v) {
+    return;
 }
