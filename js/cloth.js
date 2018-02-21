@@ -15,7 +15,7 @@ function maximizeRendererSize() {
 }
 
 window.onload  = function() {
-    cloth_inst = new Cloth(0.05, 10, 0.1, 5, 8);
+    cloth_inst = new Cloth(0.05, 10, 0.1, 6, 30);
 
     framerate_elem = document.getElementById("fps-counter");
 

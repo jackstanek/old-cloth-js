@@ -1,6 +1,6 @@
 /* Some constants. GRAV_ACC is not really a force since it is
  * constant for every object. */
-const GRAV_ACC   = new THREE.Vector3(0, -10, 0);
+const GRAV_ACC         = new THREE.Vector3(0, -10, 0);
 
 const DEFAULT_MATERIAL = new THREE.MeshPhongMaterial({color: 0xffffff});
 
@@ -102,7 +102,7 @@ function Cloth(node_mass, tension, damping, size, density) {
                                                         this.size / 2 - this.spring_len * y, 0));
     }
 
-    this.geometry = new THREE.ParametricGeometry(clothGeometryFunc(this), density, density);
+    this.geometry = new THREE.PlaneGeometry(size, size, density - 1, density - 1);
     this.mesh     = new THREE.Mesh(this.geometry, DEFAULT_MATERIAL);
 }
 
@@ -113,9 +113,10 @@ Cloth.prototype.updatePhysics = function(dt) {
 
     for (node in this.nodes) {
         this.nodes[node].commitUpdate();
+        this.geometry.vertices[node].copy(this.nodes[node].pos.ol);
     }
 
-    this.mesh.verticesNeedUpdate = true;
+    this.geometry.verticesNeedUpdate = true;
 }
 
 Cloth.prototype.nodeIndex = function(index) {
@@ -142,6 +143,5 @@ function clothGeometryFunc(cloth) {
         let index = {x: Math.floor(u * (cloth.density - 1)),
                      y: Math.floor(v * (cloth.density - 1))};
         return cloth.nodeAtIndex(index).pos.ol;
-
     };
 }
