@@ -25,9 +25,6 @@ function ClothNode(mass, x, y, pos, tension, damping) {
     this.vel      = new UpdatableVec3(randomVector3());
     this.dv       = new THREE.Vector3();
     this.acc      = new UpdatableVec3();
-    this.mesh     = new THREE.Mesh(new THREE.SphereGeometry(0.1),
-                                   DEFAULT_MATERIAL);
-    this.mesh.position.copy(this.pos.ol);
 }
 
 ClothNode.prototype.updatePhysics = function(cloth, dt) {
@@ -73,7 +70,6 @@ ClothNode.prototype.commitUpdate = function() {
     this.acc.swap();
     this.vel.swap();
     this.pos.swap();
-    this.mesh.position.copy(this.pos.ol);
 }
 
 ClothNode.prototype.forceFrom = function(cloth, neighbor_index) {
@@ -105,6 +101,9 @@ function Cloth(node_mass, tension, damping, size, density) {
                                       new THREE.Vector3(this.spring_len * x - this.size / 2,
                                                         this.size / 2 - this.spring_len * y, 0));
     }
+
+    this.geometry = new THREE.ParametricGeometry(clothGeometryFunc(this), density, density);
+    this.mesh     = new THREE.Mesh(this.geometry, DEFAULT_MATERIAL);
 }
 
 Cloth.prototype.updatePhysics = function(dt) {
@@ -115,6 +114,8 @@ Cloth.prototype.updatePhysics = function(dt) {
     for (node in this.nodes) {
         this.nodes[node].commitUpdate();
     }
+
+    this.mesh.verticesNeedUpdate = true;
 }
 
 Cloth.prototype.nodeIndex = function(index) {
@@ -133,11 +134,14 @@ Cloth.prototype.isValid = function(index) {
 
 // TODO: Make this create a parametric geometry instead
 Cloth.prototype.initScene = function(scene) {
-    for (let i = 0; i < this.nodes.length; i++) {
-        scene.add(this.nodes[i].mesh);
-    }
+    scene.add(this.mesh);
 }
 
-function clothGeometryFunc(u, v) {
-    return;
+function clothGeometryFunc(cloth) {
+    return function(v, u) {
+        let index = {x: Math.floor(u * (cloth.density - 1)),
+                     y: Math.floor(v * (cloth.density - 1))};
+        return cloth.nodeAtIndex(index).pos.ol;
+
+    };
 }
