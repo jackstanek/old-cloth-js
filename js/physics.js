@@ -2,7 +2,8 @@
  * constant for every object. */
 const GRAV_ACC         = new THREE.Vector3(0, -10, 0);
 
-const DEFAULT_MATERIAL = new THREE.MeshPhongMaterial({color: 0xffffff});
+const DEFAULT_MATERIAL = new THREE.MeshStandardMaterial({color: 0xffffff,
+                                                         map: new THREE.TextureLoader().load("./res/flag.png")});
 
 function randomVector3() {
     return new THREE.Vector3(Math.random() * 2 - 1,
@@ -22,14 +23,14 @@ function ClothNode(mass, x, y, pos, tension, damping) {
     this.index    = { x: x, y: y };
     this.pos      = new UpdatableVec3(pos);
     this.dp       = new THREE.Vector3();
-    this.vel      = new UpdatableVec3(randomVector3());
+    this.vel      = new UpdatableVec3();
     this.dv       = new THREE.Vector3();
     this.acc      = new UpdatableVec3();
 }
 
 ClothNode.prototype.updatePhysics = function(cloth, dt) {
     /* The top of the thread is pinned in place. */
-    if (this.index.y === 0) {
+    if (this.index.x === 0) {
         return;
     }
 
@@ -56,6 +57,10 @@ ClothNode.prototype.updatePhysics = function(cloth, dt) {
 
     // Gravitational force
     total_forces.add(new THREE.Vector3(0, -9.8 * this.mass, 0));
+
+    // Wind force
+    total_forces.add(new THREE.Vector3(10, 0, 0)
+                     .add(randomVector3().multiplyScalar(2)));
 
     this.acc.ne.copy(total_forces.divideScalar(this.mass));
 
