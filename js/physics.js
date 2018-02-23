@@ -11,10 +11,11 @@ function randomVector3() {
                              Math.random() * 2 - 1).normalize();
 }
 
-function integrate(y, y_prime, dt) {
+function euler_iteration(y, y_prime, dt) {
     var dy = new THREE.Vector3();
-    dy.copy(y_prime.ne);
+    dy.copy(y_prime.ol);
     dy.multiplyScalar(dt);
+    y.ne.copy(y.ol);
     y.ne.add(dy);
 }
 
@@ -28,53 +29,44 @@ function ClothNode(mass, x, y, pos, tension, damping) {
     this.acc      = new UpdatableVec3();
 }
 
-ClothNode.prototype.updatePhysics = function(cloth, dt) {
-    /* The top of the thread is pinned in place. */
-    if (this.index.x === 0) {
-        return;
-    }
+ClothNode.prototype.calculateForces = function(cloth) {
+    if (this.index.y === 0) {
+        this.acc.ne.set(0, 0, 0);
+    } else {
+        var total_forces = new THREE.Vector3();
 
-    var total_forces = new THREE.Vector3();
-
-    // Spring restorative forces
-    // This first force we know will always exist. (the spring force from above)
-    var neighbors = [{x: this.index.x, y: this.index.y - 1},
-                     {x: this.index.x, y: this.index.y + 1},
-                     {x: this.index.x - 1, y: this.index.y},
-                     {x: this.index.x + 1, y: this.index.y}];
-    for (n in neighbors) {
-        let neighbor_index = neighbors[n];
-        if (cloth.isValid(neighbor_index)) {
-            total_forces.add(this.forceFrom(cloth, neighbor_index));
+        // Spring restorative forces
+        // This first force we know will always exist. (the spring force from above)
+        var neighbors = [{x: this.index.x, y: this.index.y - 1},
+                         {x: this.index.x, y: this.index.y + 1},
+                         {x: this.index.x - 1, y: this.index.y},
+                         {x: this.index.x + 1, y: this.index.y}];
+        for (n in neighbors) {
+            let neighbor_index = neighbors[n];
+            if (cloth.isValid(neighbor_index)) {
+                total_forces.add(this.forceFrom(cloth, neighbor_index));
+            }
         }
+
+        // Damping force
+        var tmp_vel = new THREE.Vector3();
+        tmp_vel.copy(this.vel.ol);
+        tmp_vel.negate();
+        total_forces.add(tmp_vel.multiplyScalar(cloth.damping));
+
+        // Gravitational force
+        total_forces.add(new THREE.Vector3(0, -9.8 * this.mass, 0));
+
+        this.acc.ne.copy(total_forces.divideScalar(this.mass));
     }
-
-    // Damping force
-    var tmp_vel = new THREE.Vector3();
-    tmp_vel.copy(this.vel.ol);
-    tmp_vel.negate();
-    total_forces.add(tmp_vel.multiplyScalar(cloth.damping));
-
-    // Gravitational force
-    total_forces.add(new THREE.Vector3(0, -9.8 * this.mass, 0));
-
-    // Wind force
-    total_forces.add(new THREE.Vector3(10, 0, 0)
-                     .add(randomVector3().multiplyScalar(2)));
-
-    this.acc.ne.copy(total_forces.divideScalar(this.mass));
-
-    /* Do Eulerian integration for velocity */
-    integrate(this.vel, this.acc, dt);
-
-    /* Do Eulerian integration for position */
-    integrate(this.pos, this.vel, dt);
 }
 
-ClothNode.prototype.commitUpdate = function() {
-    this.acc.swap();
-    this.vel.swap();
-    this.pos.swap();
+ClothNode.prototype.updateVelocity = function(dt) {
+    euler_iteration(this.vel, this.acc, dt);
+}
+
+ClothNode.prototype.updatePosition = function(dt) {
+    euler_iteration(this.pos, this.vel, dt);
 }
 
 ClothNode.prototype.forceFrom = function(cloth, neighbor_index) {
@@ -113,15 +105,21 @@ function Cloth(node_mass, tension, damping, size, density) {
 
 Cloth.prototype.updatePhysics = function(dt) {
     for (node in this.nodes) {
-        this.nodes[node].updatePhysics(this, dt);
+        this.nodes[node].calculateForces(this);
+        this.nodes[node].acc.swap();
+        this.nodes[node].updateVelocity(dt);
+        this.nodes[node].vel.swap();
     }
 
     for (node in this.nodes) {
-        this.nodes[node].commitUpdate();
+        this.nodes[node].updatePosition(dt);
+        this.nodes[node].pos.swap();
         this.geometry.vertices[node].copy(this.nodes[node].pos.ol);
     }
 
+    this.geometry.computeFaceNormals();
     this.geometry.verticesNeedUpdate = true;
+    this.geometry.normalsNeedUpdate  = true;
 }
 
 Cloth.prototype.nodeIndex = function(index) {
