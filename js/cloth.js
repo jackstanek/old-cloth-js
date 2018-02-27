@@ -3,7 +3,7 @@ const MAX_FRAME_TIME = 0.25;
 var frame_ct = 0, total_frame_time = 0;
 var framerate_elem;
 
-var renderer, scene, camera;
+var renderer, scene, camera, controls;
 var cloth_inst, light;
 
 var prev_time = 0;
@@ -15,7 +15,7 @@ function maximizeRendererSize() {
 }
 
 window.onload  = function() {
-    cloth_inst = new Cloth(0.1, 10, 0.1, 4, 4);
+    cloth_inst = new Cloth(0.25, 300, 1, 4, 20);
 
     framerate_elem = document.getElementById("fps-counter");
 
@@ -27,6 +27,7 @@ window.onload  = function() {
     maximizeRendererSize();
     renderer.domElement.id = "rendering-output";
     document.body.appendChild(renderer.domElement);
+    controls = new THREE.OrbitControls(camera, renderer.domElement);
 
     light    = new THREE.DirectionalLight(0xffffff, 1);
     light.position.set(0, 2, 5);
@@ -55,6 +56,7 @@ function animate(curr_time) {
 
     cloth_inst.updatePhysics(dt);
 
+    controls.update();
     renderer.render(scene, camera);
 
     /* Show a frame rate */

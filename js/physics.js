@@ -3,7 +3,10 @@
 const GRAV_ACC         = new THREE.Vector3(0, -10, 0);
 
 const DEFAULT_MATERIAL = new THREE.MeshStandardMaterial({color: 0xffffff,
-                                                         map: new THREE.TextureLoader().load("./res/flag.png")});
+                                                         map: new THREE.TextureLoader().load("./res/flag.png"),
+                                                         side: THREE.DoubleSide});
+
+var wind_force = new THREE.Vector3(9, 0, 0);
 
 function randomVector3() {
     return new THREE.Vector3(Math.random() * 2 - 1,
@@ -20,13 +23,13 @@ function euler_iteration(y, y_prime, dt) {
 }
 
 function ClothNode(mass, x, y, pos, tension, damping) {
-    this.mass     = mass;
-    this.index    = { x: x, y: y };
-    this.pos      = new UpdatableVec3(pos);
-    this.dp       = new THREE.Vector3();
-    this.vel      = new UpdatableVec3();
-    this.dv       = new THREE.Vector3();
-    this.acc      = new UpdatableVec3();
+    this.mass      = mass;
+    this.index     = { x: x, y: y };
+    this.pos       = new UpdatableVec3(pos);
+    this.dp        = new THREE.Vector3();
+    this.vel       = new UpdatableVec3();
+    this.dv        = new THREE.Vector3();
+    this.acc       = new UpdatableVec3();
 }
 
 ClothNode.prototype.calculateForces = function(cloth) {
@@ -56,6 +59,11 @@ ClothNode.prototype.calculateForces = function(cloth) {
 
         // Gravitational force
         total_forces.add(new THREE.Vector3(0, -9.8 * this.mass, 0));
+
+        // Wind force
+        // var tmp_wind = new THREE.Vector3();
+        // tmp_wind.copy(wind_force);
+        // total_forces.add(tmp_wind.add(randomVector3().multiplyScalar(30)));
 
         this.acc.ne.copy(total_forces.divideScalar(this.mass));
     }
@@ -107,6 +115,19 @@ Cloth.prototype.updatePhysics = function(dt) {
     for (node in this.nodes) {
         this.nodes[node].calculateForces(this);
         this.nodes[node].acc.swap();
+        this.nodes[node].updateVelocity(dt / 2);
+        this.nodes[node].vel.swap();
+    }
+
+    for (node in this.nodes) {
+        this.nodes[node].updatePosition(dt / 2);
+        this.nodes[node].pos.swap();
+    }
+
+    for (node in this.nodes) {
+        this.nodes[node].calculateForces(this);
+        this.nodes[node].pos.swap();
+        this.nodes[node].acc.swap();
         this.nodes[node].updateVelocity(dt);
         this.nodes[node].vel.swap();
     }
@@ -116,6 +137,7 @@ Cloth.prototype.updatePhysics = function(dt) {
         this.nodes[node].pos.swap();
         this.geometry.vertices[node].copy(this.nodes[node].pos.ol);
     }
+
 
     this.geometry.computeFaceNormals();
     this.geometry.verticesNeedUpdate = true;

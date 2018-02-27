@@ -7,5 +7,8 @@ function UpdatableVec3(v = new THREE.Vector3()) {
 }
 
 UpdatableVec3.prototype.swap = function() {
+    var tmp = new THREE.Vector3();
+    tmp.copy(this.ol);
     this.ol.copy(this.ne);
+    this.ne.copy(tmp);
 }
