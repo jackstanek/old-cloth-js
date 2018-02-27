@@ -15,7 +15,7 @@ function maximizeRendererSize() {
 }
 
 window.onload  = function() {
-    cloth_inst = new Cloth(0.1, 50, 0.1, 2, 10);
+    cloth_inst = new Cloth(0.05, 20, 0.1, 2, 15);
 
     framerate_elem = document.getElementById("fps-counter");
 
@@ -30,7 +30,7 @@ window.onload  = function() {
     controls = new THREE.OrbitControls(camera, renderer.domElement);
 
     light    = new THREE.DirectionalLight(0xffffff, 1);
-    light.position.set(0, 2, 5);
+    light.position.set(0.1, 2, 4);
     scene.add(light);
     scene.add(new THREE.AmbientLight(0xffffff, 0.1));
 

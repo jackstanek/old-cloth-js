@@ -2,11 +2,11 @@
  * constant for every object. */
 const GRAV_ACC         = new THREE.Vector3(0, -10, 0);
 
-const DEFAULT_MATERIAL = new THREE.MeshStandardMaterial({color: 0xffffff,
-                                                         map: new THREE.TextureLoader().load("./res/flag.png"),
-                                                         side: THREE.DoubleSide});
+const DEFAULT_MATERIAL = new THREE.MeshLambertMaterial({color: 0xffffff,
+                                                        map: new THREE.TextureLoader().load("./res/flag.png"),
+                                                        side: THREE.DoubleSide});
 
-var wind_force = new THREE.Vector3(0, 0, 0);
+var wind_force = new THREE.Vector3(0.5, 0, 0);
 
 function randomVector3() {
     return new THREE.Vector3(Math.random() * 2 - 1,
@@ -51,7 +51,7 @@ function neighbors(cloth, node) {
 }
 
 ClothNode.prototype.calculateForces = function(cloth, neighbor_cb = neighbors, wind = true) {
-    if (this.index.x === 0) {
+    if (this.index.y === 0) {
         this.acc.ne.set(0, 0, 0);
     } else {
         var total_forces = new THREE.Vector3();
@@ -67,11 +67,10 @@ ClothNode.prototype.calculateForces = function(cloth, neighbor_cb = neighbors, w
         // Gravitational force
         total_forces.add(new THREE.Vector3(0, -9.8 * this.mass, 0));
 
-        // Wind force
         if (wind) {
-            var tmp_wind = new THREE.Vector3();
+            let tmp_wind = new THREE.Vector3();
             tmp_wind.copy(wind_force);
-            total_forces.add(tmp_wind.add(randomVector3().multiplyScalar(0.7)));
+            total_forces.add(tmp_wind.add(randomVector3()));
         }
 
         this.acc.ne.copy(total_forces.divideScalar(this.mass));
@@ -121,10 +120,6 @@ function Cloth(node_mass, tension, damping, size, density) {
 }
 
 Cloth.prototype.updatePhysics = function(dt) {
-    if (Math.random() < 0.01) {
-        wind_force.copy(randomVector3());
-    }
-
     for (node in this.nodes) {
         this.nodes[node].calculateForces(this);
         this.nodes[node].acc.swap();
@@ -157,11 +152,21 @@ Cloth.prototype.updatePhysics = function(dt) {
         positions[node * 3 + 2] = this.nodes[node].pos.ol.z;
     }
 
-    for (node in this.nodes) {
-        //this.geometry
+    for (let node = 0; node < this.nodes.length - this.density; node++) {
+        let new_normal = new THREE.Vector3();
+        let tmp1 = new THREE.Vector3(),
+            tmp2 = new THREE.Vector3();
+        tmp1.copy(this.nodes[node + 1].pos.ol);
+        tmp2.copy(this.nodes[node + this.density].pos.ol);
+        new_normal.copy(tmp1.cross(tmp2).normalize().negate());
+
+        normals[node * 3 + 0] = new_normal.x;
+        normals[node * 3 + 0] = new_normal.y;
+        normals[node * 3 + 0] = new_normal.z;
     }
 
     this.geometry.attributes.position.needsUpdate = true;
+    this.geometry.attributes.normal.needsUpdate = true;
 }
 
 Cloth.prototype.nodeIndex = function(index) {
