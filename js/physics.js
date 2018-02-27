@@ -6,7 +6,7 @@ const DEFAULT_MATERIAL = new THREE.MeshStandardMaterial({color: 0xffffff,
                                                          map: new THREE.TextureLoader().load("./res/flag.png"),
                                                          side: THREE.DoubleSide});
 
-var wind_force = new THREE.Vector3(9, 0, 0);
+var wind_force = new THREE.Vector3(0, 0, 0);
 
 function randomVector3() {
     return new THREE.Vector3(Math.random() * 2 - 1,
@@ -32,24 +32,31 @@ function ClothNode(mass, x, y, pos, tension, damping) {
     this.acc       = new UpdatableVec3();
 }
 
-ClothNode.prototype.calculateForces = function(cloth) {
-    if (this.index.y === 0) {
+function neighbors(cloth, node) {
+    // Spring restorative forces
+    // This first force we know will always exist. (the spring force from above)
+    var total_forces = new THREE.Vector3();
+    var neighbors = [{x: node.index.x, y: node.index.y - 1},
+                     {x: node.index.x, y: node.index.y + 1},
+                     {x: node.index.x - 1, y: node.index.y},
+                     {x: node.index.x + 1, y: node.index.y}];
+    for (n in neighbors) {
+        let neighbor_index = neighbors[n];
+        if (cloth.isValid(neighbor_index)) {
+            total_forces.add(node.forceFrom(cloth, neighbor_index));
+        }
+    }
+
+    return total_forces;
+}
+
+ClothNode.prototype.calculateForces = function(cloth, neighbor_cb = neighbors, wind = true) {
+    if (this.index.x === 0) {
         this.acc.ne.set(0, 0, 0);
     } else {
         var total_forces = new THREE.Vector3();
 
-        // Spring restorative forces
-        // This first force we know will always exist. (the spring force from above)
-        var neighbors = [{x: this.index.x, y: this.index.y - 1},
-                         {x: this.index.x, y: this.index.y + 1},
-                         {x: this.index.x - 1, y: this.index.y},
-                         {x: this.index.x + 1, y: this.index.y}];
-        for (n in neighbors) {
-            let neighbor_index = neighbors[n];
-            if (cloth.isValid(neighbor_index)) {
-                total_forces.add(this.forceFrom(cloth, neighbor_index));
-            }
-        }
+        total_forces.add(neighbor_cb(cloth, this));
 
         // Damping force
         var tmp_vel = new THREE.Vector3();
@@ -61,9 +68,11 @@ ClothNode.prototype.calculateForces = function(cloth) {
         total_forces.add(new THREE.Vector3(0, -9.8 * this.mass, 0));
 
         // Wind force
-        // var tmp_wind = new THREE.Vector3();
-        // tmp_wind.copy(wind_force);
-        // total_forces.add(tmp_wind.add(randomVector3().multiplyScalar(30)));
+        if (wind) {
+            var tmp_wind = new THREE.Vector3();
+            tmp_wind.copy(wind_force);
+            total_forces.add(tmp_wind.add(randomVector3().multiplyScalar(0.7)));
+        }
 
         this.acc.ne.copy(total_forces.divideScalar(this.mass));
     }
@@ -107,11 +116,15 @@ function Cloth(node_mass, tension, damping, size, density) {
                                                         this.size / 2 - this.spring_len * y, 0));
     }
 
-    this.geometry = new THREE.PlaneGeometry(size, size, density - 1, density - 1);
+    this.geometry = new THREE.PlaneBufferGeometry(size, size, density - 1, density - 1);
     this.mesh     = new THREE.Mesh(this.geometry, DEFAULT_MATERIAL);
 }
 
 Cloth.prototype.updatePhysics = function(dt) {
+    if (Math.random() < 0.01) {
+        wind_force.copy(randomVector3());
+    }
+
     for (node in this.nodes) {
         this.nodes[node].calculateForces(this);
         this.nodes[node].acc.swap();
@@ -132,16 +145,23 @@ Cloth.prototype.updatePhysics = function(dt) {
         this.nodes[node].vel.swap();
     }
 
+    var positions = this.geometry.attributes.position.array,
+        normals   = this.geometry.attributes.normal.array;
+
     for (node in this.nodes) {
         this.nodes[node].updatePosition(dt);
         this.nodes[node].pos.swap();
-        this.geometry.vertices[node].copy(this.nodes[node].pos.ol);
+
+        positions[node * 3 + 0] = this.nodes[node].pos.ol.x;
+        positions[node * 3 + 1] = this.nodes[node].pos.ol.y;
+        positions[node * 3 + 2] = this.nodes[node].pos.ol.z;
     }
 
+    for (node in this.nodes) {
+        //this.geometry
+    }
 
-    this.geometry.computeFaceNormals();
-    this.geometry.verticesNeedUpdate = true;
-    this.geometry.normalsNeedUpdate  = true;
+    this.geometry.attributes.position.needsUpdate = true;
 }
 
 Cloth.prototype.nodeIndex = function(index) {

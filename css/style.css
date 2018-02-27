@@ -2,11 +2,20 @@ body {
     margin: 0 auto;
     background-color: 0x000;
     font-family: sans-serif;
+    color: white;
+}
+
+a {
+    color: white;
+    transition: color 0.25s;
+}
+
+a:hover {
+    color: #a3d356;
 }
 
 #infobox {
     position: fixed;
-    color: white;
     padding: 0.7em;
     background-color: #333;
     font-size: 0.7em;
