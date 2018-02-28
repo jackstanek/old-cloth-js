@@ -3,10 +3,10 @@
 const GRAV_ACC         = new THREE.Vector3(0, -10, 0);
 
 const DEFAULT_MATERIAL = new THREE.MeshLambertMaterial({color: 0xffffff,
-                                                        map: new THREE.TextureLoader().load("./res/flag.png"),
+                                                        map: new THREE.TextureLoader().load("./res/fabric.jpg"),
                                                         side: THREE.DoubleSide});
 
-var wind_force = new THREE.Vector3(0.5, 0, 0);
+var wind_force = new THREE.Vector3(0, 0, 0);
 
 function randomVector3() {
     return new THREE.Vector3(Math.random() * 2 - 1,
@@ -22,7 +22,7 @@ function euler_iteration(y, y_prime, dt) {
     y.ne.add(dy);
 }
 
-function ClothNode(mass, x, y, pos, tension, damping) {
+function ClothNode(mass, x, y, pos) {
     this.mass      = mass;
     this.index     = { x: x, y: y };
     this.pos       = new UpdatableVec3(pos);
@@ -32,7 +32,7 @@ function ClothNode(mass, x, y, pos, tension, damping) {
     this.acc       = new UpdatableVec3();
 }
 
-function neighbors(cloth, node) {
+function cloth_neighbors(cloth, node) {
     // Spring restorative forces
     // This first force we know will always exist. (the spring force from above)
     var total_forces = new THREE.Vector3();
@@ -50,8 +50,11 @@ function neighbors(cloth, node) {
     return total_forces;
 }
 
-ClothNode.prototype.calculateForces = function(cloth, neighbor_cb = neighbors, wind = true) {
-    if (this.index.y === 0) {
+ClothNode.prototype.calculateForces = function(cloth, neighbor_cb, wind, type = "cloth") {
+    if (type == "cloth" && this.index.y == 0) {
+        this.acc.ne.set(0, 0, 0);
+    } else if (type == "string" && this.index.x == 0 ||
+               type == "string" && this.index.x == cloth.nodes.length - 1) {
         this.acc.ne.set(0, 0, 0);
     } else {
         var total_forces = new THREE.Vector3();
@@ -70,7 +73,7 @@ ClothNode.prototype.calculateForces = function(cloth, neighbor_cb = neighbors, w
         if (wind) {
             let tmp_wind = new THREE.Vector3();
             tmp_wind.copy(wind_force);
-            total_forces.add(tmp_wind.add(randomVector3()));
+            total_forces.add(tmp_wind.add(randomVector3().multiplyScalar(0.5)));
         }
 
         this.acc.ne.copy(total_forces.divideScalar(this.mass));
@@ -94,15 +97,15 @@ ClothNode.prototype.forceFrom = function(cloth, neighbor_index) {
     /* Add in the spring force (Hooke's Law) */
     return neighbor_spring
         .normalize()
-        .multiplyScalar(cloth.tension *
+        .multiplyScalar(cloth.k *
                         (neighbor_spring_len - cloth.spring_len));
 }
 
 /* For now, a Cloth object simply represents a thread, string, or
  * rope-like object. */
-function Cloth(node_mass, tension, damping, size, density) {
+function Cloth(node_mass, k, damping, size, density) {
     this.nodes      = new Array();
-    this.tension    = tension;
+    this.k          = k;
     this.damping    = damping;
     this.size       = size;
     this.density    = Math.floor(density);
@@ -119,9 +122,9 @@ function Cloth(node_mass, tension, damping, size, density) {
     this.mesh     = new THREE.Mesh(this.geometry, DEFAULT_MATERIAL);
 }
 
-Cloth.prototype.updatePhysics = function(dt) {
+Cloth.prototype.updatePhysics = function(dt, neighbor_cb = cloth_neighbors, wind = true) {
     for (node in this.nodes) {
-        this.nodes[node].calculateForces(this);
+        this.nodes[node].calculateForces(this, neighbor_cb, wind);
         this.nodes[node].acc.swap();
         this.nodes[node].updateVelocity(dt / 2);
         this.nodes[node].vel.swap();
@@ -133,7 +136,7 @@ Cloth.prototype.updatePhysics = function(dt) {
     }
 
     for (node in this.nodes) {
-        this.nodes[node].calculateForces(this);
+        this.nodes[node].calculateForces(this, neighbor_cb, wind);
         this.nodes[node].pos.swap();
         this.nodes[node].acc.swap();
         this.nodes[node].updateVelocity(dt);

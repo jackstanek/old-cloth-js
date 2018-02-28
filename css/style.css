@@ -36,3 +36,7 @@ a:hover {
     font-size: 1.2em;
     margin: 0 auto;
 }
+
+#infobox a {
+    display: block;
+}
