@@ -15,7 +15,7 @@ function maximizeRendererSize() {
 }
 
 window.onload  = function() {
-    cloth_inst = new Cloth(0.25, 300, 1, 4, 20);
+    cloth_inst = new Cloth(0.007, 600, 1, 5, 120);
 
     framerate_elem = document.getElementById("fps-counter");
 
@@ -45,7 +45,8 @@ window.onresize = maximizeRendererSize;
 
 function animate(curr_time) {
     requestAnimationFrame(animate);
-    dt = (curr_time - prev_time) / 1000;
+    dt =  0.002;
+    //dt = (curr_time - prev_time) / 1000;
     prev_time = curr_time;
 
     /* Run forward the simulation if we were tabbed out or if the last

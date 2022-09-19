@@ -3,10 +3,10 @@
 const GRAV_ACC         = new THREE.Vector3(0, -10, 0);
 
 const DEFAULT_MATERIAL = new THREE.MeshStandardMaterial({color: 0xffffff,
-                                                         map: new THREE.TextureLoader().load("./res/flag.png"),
+                                                         map: new THREE.TextureLoader().load("./res/tablecloth.png", undefined, undefined, function(err) {console.log(err)} ),
                                                          side: THREE.DoubleSide});
 
-var wind_force = new THREE.Vector3(9, 0, 0);
+var wind_force = new THREE.Vector3(0, 0, 100);
 
 function randomVector3() {
     return new THREE.Vector3(Math.random() * 2 - 1,
@@ -61,9 +61,10 @@ ClothNode.prototype.calculateForces = function(cloth) {
         total_forces.add(new THREE.Vector3(0, -9.8 * this.mass, 0));
 
         // Wind force
-        // var tmp_wind = new THREE.Vector3();
-        // tmp_wind.copy(wind_force);
-        // total_forces.add(tmp_wind.add(randomVector3().multiplyScalar(30)));
+        var tmp_wind = new THREE.Vector3();
+        tmp_wind.copy(wind_force);
+	tmp_wind.multiplyScalar(Math.random() * (1 / this.index.y));
+        total_forces.add(tmp_wind);
 
         this.acc.ne.copy(total_forces.divideScalar(this.mass));
     }
