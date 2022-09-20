@@ -19,7 +19,9 @@ function euler_iteration(y, y_prime, dt) {
     dy.copy(y_prime.ol);
     dy.multiplyScalar(dt);
     y.ne.copy(y.ol);
-    y.ne.add(dy);
+    // nasty hack to prevent divergence
+    y.ne.add(dy.clamp(new THREE.Vector3(-0.5, -0.5, -0.5),
+                      new THREE.Vector3(0.5, 0.5, 0.5)));
 }
 
 function ClothNode(mass, x, y, pos, tension, damping) {
@@ -33,7 +35,7 @@ function ClothNode(mass, x, y, pos, tension, damping) {
 }
 
 ClothNode.prototype.calculateForces = function(cloth) {
-    if (this.index.y === 0) {
+    if (this.index.y === 0 && (this.index.x == 0 || this.index.x == cloth.density - 1)) {
         this.acc.ne.set(0, 0, 0);
     } else {
         var total_forces = new THREE.Vector3();
@@ -61,10 +63,10 @@ ClothNode.prototype.calculateForces = function(cloth) {
         total_forces.add(new THREE.Vector3(0, -9.8 * this.mass, 0));
 
         // Wind force
-        var tmp_wind = new THREE.Vector3();
-        tmp_wind.copy(wind_force);
-	tmp_wind.multiplyScalar(Math.random() * (1 / this.index.y));
-        total_forces.add(tmp_wind);
+        //var tmp_wind = new THREE.Vector3();
+        //tmp_wind.copy(wind_force);
+	////tmp_wind.multiplyScalar(1 / this.index.y);
+        //total_forces.add(tmp_wind);
 
         this.acc.ne.copy(total_forces.divideScalar(this.mass));
     }
@@ -105,7 +107,7 @@ function Cloth(node_mass, tension, damping, size, density) {
         let x = i % this.density, y = Math.floor(i / this.density);
         this.nodes[i] = new ClothNode(node_mass, x, y,
                                       new THREE.Vector3(this.spring_len * x - this.size / 2,
-                                                        this.size / 2 - this.spring_len * y, 0));
+                                                        this.size / 2 - this.spring_len * y, y * 0.2));
     }
 
     this.geometry = new THREE.PlaneGeometry(size, size, density - 1, density - 1);
